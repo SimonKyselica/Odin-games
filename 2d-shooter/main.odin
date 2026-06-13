@@ -5,6 +5,7 @@ import rl "vendor:raylib"
 
 SPEED       :: f32(200)
 ENEMY_SPEED :: f32(100)
+BULLET_SPEED :: f32(300)
 
 Player :: struct {
     pos:      rl.Vector2,
@@ -13,6 +14,11 @@ Player :: struct {
 
 Enemy :: struct {
     pos: rl.Vector2,
+}
+
+Bullet :: struct {
+	pos: rl.Vector2,
+	vel: rl.Vector2,
 }
 
 update_player_rotation :: proc(player: ^Player) {
@@ -30,6 +36,9 @@ main :: proc() {
     rl.InitWindow(800, 450, "2D Shooter")
     rl.SetTargetFPS(60)
 
+    bullets := make([dynamic]Bullet)
+    defer delete(bullets)
+
     player := Player{
         pos = {50, 50},
     }
@@ -38,16 +47,31 @@ main :: proc() {
         pos = {200, 200},
     }
 
+    
+
     for !rl.WindowShouldClose() {
         dt := rl.GetFrameTime()
         
         update_player_rotation(&player)
+
+        for &bullet in bullets {
+            bullet.pos.x += bullet.vel.x * dt
+            bullet.pos.y += bullet.vel.y * dt
+        }
 
         // Player input
         if rl.IsKeyDown(.RIGHT) do player.pos.x += SPEED * dt
         if rl.IsKeyDown(.LEFT)  do player.pos.x -= SPEED * dt
         if rl.IsKeyDown(.DOWN)  do player.pos.y += SPEED * dt
         if rl.IsKeyDown(.UP)    do player.pos.y -= SPEED * dt
+        if rl.IsMouseButtonPressed(.LEFT) {
+            bullet_rotation := player.rotation * (math.PI / 180.0)
+            new_bullet := Bullet {
+                pos = {player.pos.x, player.pos.y},
+                vel = {math.cos(bullet_rotation) * BULLET_SPEED, math.sin(bullet_rotation) * BULLET_SPEED},
+            }
+            append(&bullets, new_bullet)
+        }
 
         // Enemy movement
         if enemy.pos.x < player.pos.x do enemy.pos.x += ENEMY_SPEED * dt
@@ -77,7 +101,11 @@ main :: proc() {
         
         // Draw the enemy
         rl.DrawRectangle(i32(enemy.pos.x), i32(enemy.pos.y), 20, 20, rl.RED)
-        
+
+        for &bullet in bullets {
+            rl.DrawCircle(i32(bullet.pos.x), i32(bullet.pos.y), 5, rl.BLACK)
+        }
+
         rl.EndDrawing()
     }
 
